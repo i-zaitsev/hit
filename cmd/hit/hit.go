@@ -14,30 +14,16 @@ const logo = `
 
  [ the load testing tool ]`
 
-const usage = `
-Usage:
-	-url
-		HTTP server URL (required)
-	-n
-		Number of requests
-	-c 
-		Concurrency level
-	-rps
-		Requests per second`
-
 func main() {
 	c := config{
 		n: 100,
 		c: 1,
 	}
-	if err := parseArgs(
-		&c, os.Args[1:],
-	); err != nil {
-		fmt.Printf("%s\n%s", err, usage)
+	if err := parseArgs(&c, os.Args[1:]); err != nil {
 		os.Exit(1)
 	}
 	if c.url == "" {
-		fmt.Printf("error: -url is required\n%s", usage)
+		fmt.Println("error: -url is required")
 		os.Exit(1)
 	}
 	fmt.Printf(

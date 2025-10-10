@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"strconv"
 	"strings"
@@ -14,6 +15,15 @@ type config struct {
 }
 
 func parseArgs(c *config, args []string) error {
+	fs := flag.NewFlagSet("hit", flag.ContinueOnError)
+	fs.StringVar(&c.url, "url", "", "HTTP server `URL` (required)")
+	fs.IntVar(&c.n, "n", c.n, "Number of requests")
+	fs.IntVar(&c.c, "c", c.c, "Concurrency level")
+	fs.IntVar(&c.rps, "rps", c.rps, "Requests per second")
+	return fs.Parse(args)
+}
+
+func parseArgsCustom(c *config, args []string) error {
 	flagSet := map[string]parseFunc{
 		"url": stringVar(&c.url),
 		"n":   intVar(&c.n),
