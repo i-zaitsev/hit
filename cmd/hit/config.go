@@ -4,20 +4,23 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"net/url"
 	"strconv"
 	"strings"
 )
 
 type config struct {
-	url string
-	n   int
-	c   int
-	rps int
+	url    string
+	n      int
+	c      int
+	rps    int
+	dryRun bool
 }
 
-func parseArgs(c *config, args []string) error {
+func parseArgs(c *config, args []string, stderr io.Writer) error {
 	fs := flag.NewFlagSet("hit", flag.ContinueOnError)
+	fs.SetOutput(stderr)
 	fs.Usage = func() {
 		_, _ = fmt.Fprintf(fs.Output(), "usage: %s [options] url\n", fs.Name())
 		fs.PrintDefaults()
@@ -25,6 +28,7 @@ func parseArgs(c *config, args []string) error {
 	fs.Var(asPositiveIntValue(&c.n), "n", "Number of requests")
 	fs.Var(asPositiveIntValue(&c.c), "c", "Concurrency level")
 	fs.Var(asPositiveIntValue(&c.rps), "rps", "Requests per second")
+	fs.BoolVar(&c.dryRun, "dry-run", c.dryRun, "Do not run the tool, validate args only")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
