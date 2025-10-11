@@ -20,10 +20,7 @@ func main() {
 		c: 1,
 	}
 	if err := parseArgs(&c, os.Args[1:]); err != nil {
-		os.Exit(1)
-	}
-	if c.url == "" {
-		fmt.Println("error: -url is required")
+		fmt.Println(err)
 		os.Exit(1)
 	}
 	fmt.Printf(

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 )
@@ -17,11 +18,39 @@ type config struct {
 
 func parseArgs(c *config, args []string) error {
 	fs := flag.NewFlagSet("hit", flag.ContinueOnError)
-	fs.StringVar(&c.url, "url", "", "HTTP server `URL` (required)")
+	fs.Usage = func() {
+		_, _ = fmt.Fprintf(fs.Output(), "usage: %s [options] url\n", fs.Name())
+		fs.PrintDefaults()
+	}
 	fs.Var(asPositiveIntValue(&c.n), "n", "Number of requests")
 	fs.Var(asPositiveIntValue(&c.c), "c", "Concurrency level")
 	fs.Var(asPositiveIntValue(&c.rps), "rps", "Requests per second")
-	return fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	c.url = fs.Arg(0)
+	if err := validateArgs(c); err != nil {
+		_, _ = fmt.Fprintln(fs.Output(), err)
+		fs.Usage()
+		return err
+	}
+	return nil
+}
+
+func validateArgs(c *config) error {
+	u, err := url.Parse(c.url)
+	if err != nil {
+		return fmt.Errorf("invalid value %q for url: %w", c.url, err)
+	}
+	if c.url == "" || u.Host == "" || u.Scheme == "" {
+		return fmt.Errorf("invalid value %q for url: requires a valid url", c.url)
+	}
+	if c.n < c.c {
+		return fmt.Errorf(
+			"invalid value %d for flag -n: should be greater than flag -c: %d", c.n, c.c,
+		)
+	}
+	return nil
 }
 
 func parseArgsCustom(c *config, args []string) error {
