@@ -1,6 +1,7 @@
 package hit
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -22,14 +23,19 @@ func Send(_ *http.Client, _ *http.Request) Result {
 
 // SendN sends N requests using [Send].
 // It returns a single-user [Results] iterator that pushes a [Result] for each [net/http.Request] sent.
-func SendN(n int, req *http.Request, opts Options) (Results, error) {
+func SendN(
+	ctx context.Context,
+	n int, req *http.Request, opts Options,
+) (Results, error) {
 	if n <= 0 {
 		return nil, fmt.Errorf("n must be positive: got %d", n)
 	}
 
-	results := runPipeline(n, req, withDefaults(opts))
+	ctx, cancel := context.WithCancel(ctx)
+	results := runPipeline(ctx, n, req, withDefaults(opts))
 
 	return func(yield func(Result) bool) {
+		defer cancel()
 		for result := range results {
 			if !yield(result) {
 				return

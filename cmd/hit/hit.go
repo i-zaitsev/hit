@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"math"
 	"net/http"
 	"os"
+	"os/signal"
+	"runtime"
+	"runtime/pprof"
 	"time"
 
 	"github.com/i-zaitsev/hit"
@@ -28,13 +32,17 @@ type env struct {
 }
 
 func main() {
+	exitStatus := 0
 	if err := run(&env{
 		stdout: os.Stdout,
 		stderr: os.Stderr,
 		args:   os.Args,
 	}); err != nil {
-		os.Exit(1)
+		exitStatus = 1
 	}
+	time.Sleep(10 * time.Millisecond)
+	goroutineCheck()
+	os.Exit(exitStatus)
 }
 
 func run(e *env) error {
@@ -61,21 +69,26 @@ func run(e *env) error {
 }
 
 func runHit(c *config, stdout io.Writer) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
 	req, err := http.NewRequest(http.MethodGet, c.url, http.NoBody)
 	if err != nil {
 		return fmt.Errorf("creating a new request: %w", err)
 	}
-	results, err := hit.SendN(
-		c.n, req, hit.Options{
-			Concurrency: c.c,
-			RPS:         c.rps,
-		},
-	)
+
+	results, err := hit.SendN(ctx, c.n, req, hit.Options{
+		Concurrency: c.c,
+		RPS:         c.rps,
+	})
+
 	if err != nil {
 		return fmt.Errorf("sending requests: %w", err)
 	}
+
 	printSummary(hit.Summarize(results), stdout)
-	return nil
+
+	return ctx.Err()
 }
 
 func printSummary(sum hit.Summary, stdout io.Writer) {
@@ -99,4 +112,11 @@ Summary:
 		sum.Fastest.Round(time.Millisecond),
 		sum.Slowest.Round(time.Millisecond),
 	)
+}
+
+func goroutineCheck() {
+	_, _ = fmt.Fprintf(os.Stderr, "goroutines at exit: %d\n", runtime.NumGoroutine())
+	if n := runtime.NumGoroutine(); n > 1 {
+		_ = pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
+	}
 }
