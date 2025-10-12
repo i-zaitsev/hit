@@ -23,13 +23,15 @@ func Send(_ *http.Client, _ *http.Request) Result {
 // SendN sends N requests using [Send].
 // It returns a single-user [Results] iterator that pushes a [Result] for each [net/http.Request] sent.
 func SendN(n int, req *http.Request, opts Options) (Results, error) {
-	opts = withDefaults(opts)
 	if n <= 0 {
 		return nil, fmt.Errorf("n must be positive: got %d", n)
 	}
+
+	results := runPipeline(n, req, withDefaults(opts))
+
 	return func(yield func(Result) bool) {
-		for range n {
-			if !yield(opts.Send(req)) {
+		for result := range results {
+			if !yield(result) {
 				return
 			}
 		}
