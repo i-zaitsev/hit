@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"math"
 	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
 	"runtime/pprof"
+	"strings"
 	"time"
 
 	"github.com/i-zaitsev/hit"
@@ -29,6 +31,7 @@ type env struct {
 	stderr io.Writer
 	args   []string
 	dryRun bool
+	debug  bool
 }
 
 func main() {
@@ -54,6 +57,12 @@ func run(e *env) error {
 		return err
 	}
 	e.dryRun = c.dryRun
+	e.debug = c.debug
+
+	if e.debug {
+		slog.SetLogLoggerLevel(slog.LevelDebug)
+	}
+
 	_, _ = fmt.Fprintf(
 		e.stdout, "%s\n\nSending %d requests to %q (concurrency: %d)\n",
 		logo, c.n, c.url, c.c,
@@ -115,8 +124,12 @@ Summary:
 }
 
 func goroutineCheck() {
-	_, _ = fmt.Fprintf(os.Stderr, "goroutines at exit: %d\n", runtime.NumGoroutine())
+	slog.Debug("runtime", "goroutines_at_exit", runtime.NumGoroutine())
 	if n := runtime.NumGoroutine(); n > 1 {
-		_ = pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
+		var buf strings.Builder
+		_ = pprof.Lookup("goroutine").WriteTo(&buf, 1)
+		for line := range strings.Lines(buf.String()) {
+			slog.Debug(line)
+		}
 	}
 }

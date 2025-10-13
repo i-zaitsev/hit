@@ -16,6 +16,7 @@ type config struct {
 	c      int
 	rps    int
 	dryRun bool
+	debug  bool
 }
 
 func parseArgs(c *config, args []string, stderr io.Writer) error {
@@ -29,6 +30,7 @@ func parseArgs(c *config, args []string, stderr io.Writer) error {
 	fs.Var(asPositiveIntValue(&c.c), "c", "Concurrency level")
 	fs.Var(asPositiveIntValue(&c.rps), "rps", "Requests per second")
 	fs.BoolVar(&c.dryRun, "dry-run", c.dryRun, "Do not run the tool, validate args only")
+	fs.BoolVar(&c.debug, "debug", c.debug, "Running in debugging mode")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}

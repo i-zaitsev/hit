@@ -3,21 +3,28 @@ package hit
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 )
 
-func Send(_ *http.Client, _ *http.Request) Result {
-	// placeholder: real impl comes in the next changes
-
-	const roundTripTime = 100 * time.Millisecond
-
-	time.Sleep(roundTripTime)
-
+func Send(client *http.Client, req *http.Request) Result {
+	started := time.Now()
+	var (
+		bytes int64
+		code  int
+	)
+	resp, err := client.Do(req)
+	if err == nil {
+		defer resp.Body.Close()
+		code = resp.StatusCode
+		bytes, err = io.Copy(io.Discard, resp.Body)
+	}
 	return Result{
-		Status:   http.StatusOK,
-		Bytes:    10,
-		Duration: roundTripTime,
+		Duration: time.Since(started),
+		Bytes:    bytes,
+		Status:   code,
+		Error:    err,
 	}
 }
 
